@@ -287,6 +287,33 @@
    "w": 1512,
    "h": 2016,
    "caption": "snow day"
+  },
+  {
+   "file": "photo_33.jpg",
+   "thumb": "generated/thumb/photo_33.jpg",
+   "large": "generated/large/photo_33.jpg",
+   "full": "photos/photo_33.jpg",
+   "w": 1244,
+   "h": 2208,
+   "caption": ""
+  },
+  {
+   "file": "photo_34.jpg",
+   "thumb": "generated/thumb/photo_34.jpg",
+   "large": "generated/large/photo_34.jpg",
+   "full": "photos/photo_34.jpg",
+   "w": 1932,
+   "h": 2576,
+   "caption": "cuddles"
+  },
+  {
+   "file": "photo_35.jpg",
+   "thumb": "generated/thumb/photo_35.jpg",
+   "large": "generated/large/photo_35.jpg",
+   "full": "photos/photo_35.jpg",
+   "w": 1936,
+   "h": 2576,
+   "caption": "Christmas with you"
   }
  ]
 }

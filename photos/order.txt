@@ -30,3 +30,6 @@ photo_29.jpg
 photo_30.jpg
 photo_31.jpg
 photo_32.jpg
+photo_33.jpg
+photo_34.jpg
+photo_35.jpg
