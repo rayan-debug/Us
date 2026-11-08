@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#232527">
+  <title>Museum of Us</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%9D%A4%EF%B8%8F%3C/text%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600;700&family=Fredoka:wght@400;500;600;700&family=Playfair+Display:ital,wght@1,500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- ===== Password ===== -->
+  <section id="login" class="screen">
+    <div class="login-bg" aria-hidden="true"></div>
+    <form id="login-card" class="card" autocomplete="off">
+      <div class="thumb" aria-hidden="true">
+        <div class="thumb-heart">❤</div>
+        <div class="thumb-label">PRIVATE</div>
+      </div>
+      <h1 id="login-title">Museum of Us</h1>
+      <p id="login-sub" class="sub">A private experience, made with love</p>
+      <div class="stats">
+        <span>👥 2 players</span><span>⭐ 100% love</span>
+      </div>
+      <label for="pw">Enter our special date to join</label>
+      <input id="pw" type="text" inputmode="numeric" placeholder="day  month  year" spellcheck="false">
+      <button class="play" type="submit" aria-label="Play">
+        <svg viewBox="0 0 24 24" width="34" height="34"><path d="M7 4.5v15a1 1 0 0 0 1.52.85l12-7.5a1 1 0 0 0 0-1.7l-12-7.5A1 1 0 0 0 7 4.5z" fill="currentColor"/></svg>
+      </button>
+      <div id="pw-error" class="error" role="alert"></div>
+    </form>
+  </section>
+
+  <!-- ===== Loading ===== -->
+  <section id="loading" class="screen hidden">
+    <div class="spinner" aria-hidden="true"></div>
+    <h2 id="load-title">Museum of Us</h2>
+    <p class="by">by someone who loves you ❤</p>
+    <div class="bar"><div id="load-bar"></div></div>
+    <p id="load-text">Loading…</p>
+  </section>
+
+  <!-- ===== Game ===== -->
+  <section id="game" class="hidden">
+    <canvas id="c"></canvas>
+    <div id="joy-zone"></div>
+    <div id="joy-base"><div id="joy-knob"></div></div>
+
+    <div id="topbar">
+      <button id="btn-help" class="rbx-btn" title="Controls">?</button>
+      <button id="btn-view" class="rbx-btn" title="Switch camera (V)">1st</button>
+      <button id="btn-music" class="rbx-btn hidden" title="Music">♪</button>
+      <button id="btn-full" class="rbx-btn" title="Fullscreen">⛶</button>
+      <div id="chip-title" class="chip">Museum of Us</div>
+    </div>
+
+    <div id="prompt" class="hidden">
+      <div class="key"><span class="k-desktop">E</span><span class="k-touch">👆</span></div>
+      <div class="ptext">
+        <div class="paction">View memory</div>
+        <div id="prompt-obj" class="pobj"></div>
+      </div>
+    </div>
+
+    <div id="bubble"></div>
+    <div id="toast"></div>
+
+    <div id="touch-buttons">
+      <button id="t-view" class="t-btn small">1st</button>
+      <button id="t-jump" class="t-btn">
+        <svg viewBox="0 0 24 24" width="38" height="38"><path d="M12 5l7 8h-4.5v6h-5v-6H5z" fill="currentColor"/></svg>
+      </button>
+    </div>
+
+    <div id="help" class="overlay">
+      <div class="help-card">
+        <h3>How to play</h3>
+        <p id="help-text"></p>
+        <p class="tap">Tap / press any key to start ❤</p>
+      </div>
+    </div>
+
+    <div id="lightbox" class="hidden">
+      <div id="lb-stage"><img id="lb-img" alt="Our memory"></div>
+      <div class="lb-bar">
+        <button id="lb-prev" class="rbx-btn" aria-label="Previous">‹</button>
+        <div class="lb-info"><div id="lb-caption"></div><div id="lb-count"></div></div>
+        <button id="lb-next" class="rbx-btn" aria-label="Next">›</button>
+      </div>
+      <button id="lb-close" class="rbx-btn" aria-label="Close">✕</button>
+      <div class="lb-hint">Click the photo to zoom to full resolution</div>
+    </div>
+  </section>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
