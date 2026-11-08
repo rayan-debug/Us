@@ -337,6 +337,26 @@ function createGame(photoData) {
   }
 
   // ---------------- photos
+  const frameDarkMat = new THREE.MeshPhongMaterial({ color: '#9c7231', shininess: 60, specular: '#ffe3a1' });
+  const frameLipMat = new THREE.MeshPhongMaterial({ color: '#e9c77a', shininess: 100, specular: '#fff6d8' });
+  const goldFlatMat = new THREE.MeshBasicMaterial({ color: '#d8b064' });
+  const matBoardMat = new THREE.MeshBasicMaterial({ color: '#fbf6ee' });
+  const frameShadowMat = new THREE.MeshBasicMaterial({
+    map: canvasTex(128, 128, (g) => {
+      const r = g.createRadialGradient(64, 64, 20, 64, 64, 64);
+      r.addColorStop(0, 'rgba(60,30,20,0.45)'); r.addColorStop(1, 'rgba(60,30,20,0)');
+      g.fillStyle = r; g.fillRect(0, 0, 128, 128);
+    }), transparent: true, depthWrite: false,
+  });
+  const heartOrnGeo = (() => {
+    const sh = new THREE.Shape();
+    sh.moveTo(0, -0.3);
+    sh.bezierCurveTo(-0.05, -0.2, -0.36, -0.05, -0.36, 0.12);
+    sh.bezierCurveTo(-0.36, 0.3, -0.12, 0.36, 0, 0.2);
+    sh.bezierCurveTo(0.12, 0.36, 0.36, 0.3, 0.36, 0.12);
+    sh.bezierCurveTo(0.36, -0.05, 0.05, -0.2, 0, -0.3);
+    return new THREE.ExtrudeGeometry(sh, { depth: 0.12, bevelEnabled: true, bevelSize: 0.03, bevelThickness: 0.03, bevelSegments: 2 });
+  })();
   const photos = [];
   let wordIdx = 0;
   function placePhoto(data, index, x, y, z, nx, nz, maxW, maxH) {
@@ -344,20 +364,47 @@ function createGame(photoData) {
     let pw, ph;
     if (aspect > maxW / maxH) { pw = maxW; ph = maxW / aspect; } else { ph = maxH; pw = maxH * aspect; }
     const grp = new THREE.Group();
-    const glow = new THREE.Mesh(new THREE.PlaneGeometry(pw * 1.8, ph * 1.8), glowMat); glow.position.z = 0.03; grp.add(glow);
-    const frame = new THREE.Mesh(new THREE.BoxGeometry(pw + 0.7, ph + 0.7, 0.28), goldMat); frame.position.z = 0.17; grp.add(frame);
-    const matBoard = new THREE.Mesh(new THREE.PlaneGeometry(pw + 0.36, ph + 0.36), new THREE.MeshBasicMaterial({ color: '#fffdf9' }));
-    matBoard.position.z = 0.32; grp.add(matBoard);
+    const F = 1.47; // total frame border (mat + mouldings)
+    const glow = new THREE.Mesh(new THREE.PlaneGeometry(pw * 2, ph * 1.9), glowMat); glow.position.z = 0.02; grp.add(glow);
+    // soft drop shadow on the wall
+    const shadow = new THREE.Mesh(new THREE.PlaneGeometry(pw + F * 2 + 1.2, ph + F * 2 + 1.2), frameShadowMat);
+    shadow.position.set(0.12, -0.22, 0.03); grp.add(shadow);
+    // layered gold frame made of rings: outer moulding, raised ridge, bevel, bright lip; linen mat inside
+    const ring = (innerW, innerH, border, depth, m) => {
+      const z = 0.05 + depth / 2, W = innerW + border * 2;
+      for (const sy of [1, -1]) {
+        const bar = new THREE.Mesh(new THREE.BoxGeometry(W, border, depth), m);
+        bar.position.set(0, sy * (innerH / 2 + border / 2), z); grp.add(bar);
+      }
+      for (const sx of [1, -1]) {
+        const bar = new THREE.Mesh(new THREE.BoxGeometry(border, innerH, depth), m);
+        bar.position.set(sx * (innerW / 2 + border / 2), 0, z); grp.add(bar);
+      }
+    };
+    let iw = pw + 0.8, ih = ph + 0.8;
+    ring(iw, ih, 0.12, 0.34, frameLipMat); iw += 0.24; ih += 0.24;
+    ring(iw, ih, 0.3, 0.46, frameDarkMat); iw += 0.6; ih += 0.6;
+    ring(iw, ih, 0.3, 0.62, goldMat); iw += 0.6; ih += 0.6;
+    ring(iw, ih, 0.36, 0.44, frameDarkMat);
+    const back = new THREE.Mesh(new THREE.BoxGeometry(pw + 0.8, ph + 0.8, 0.26), frameDarkMat);
+    back.position.z = 0.18; grp.add(back);
+    const matBoard = new THREE.Mesh(new THREE.PlaneGeometry(pw + 0.8, ph + 0.8), matBoardMat);
+    matBoard.position.z = 0.315; grp.add(matBoard);
+    const fillet = new THREE.Mesh(new THREE.PlaneGeometry(pw + 0.12, ph + 0.12), goldFlatMat);
+    fillet.position.z = 0.32; grp.add(fillet);
     const mat = new THREE.MeshBasicMaterial({ color: '#efe4dc', toneMapped: false });
     const pic = new THREE.Mesh(new THREE.PlaneGeometry(pw, ph), mat);
-    pic.position.z = 0.33; grp.add(pic);
+    pic.position.z = 0.325; grp.add(pic);
+    // little gold heart on the top of the frame
+    const heartOrn = new THREE.Mesh(heartOrnGeo, goldMat);
+    heartOrn.position.set(0, ph / 2 + F + 0.25, 0.3); grp.add(heartOrn);
     const caption = data.caption || LOVE_WORDS[wordIdx++ % LOVE_WORDS.length];
-    const plaque = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 0.65), new THREE.MeshBasicMaterial({ map: brassPlaque(caption), toneMapped: false }));
-    plaque.position.set(0, -ph / 2 - 0.95, 0.06); grp.add(plaque);
-    const lamp = new THREE.Mesh(new THREE.BoxGeometry(Math.min(3, pw * 0.6), 0.25, 0.7), goldMat);
-    lamp.position.set(0, ph / 2 + 0.85, 0.45); grp.add(lamp);
-    const bulb = new THREE.Mesh(new THREE.BoxGeometry(Math.min(2.8, pw * 0.58), 0.08, 0.5), new THREE.MeshBasicMaterial({ color: '#fff6dc' }));
-    bulb.position.set(0, ph / 2 + 0.71, 0.45); grp.add(bulb);
+    const plaque = new THREE.Mesh(new THREE.PlaneGeometry(2.8, 0.7), new THREE.MeshBasicMaterial({ map: brassPlaque(caption), toneMapped: false }));
+    plaque.position.set(0, -ph / 2 - F - 0.6, 0.08); grp.add(plaque);
+    const lamp = new THREE.Mesh(new THREE.BoxGeometry(Math.min(3.2, pw * 0.6), 0.25, 0.9), goldMat);
+    lamp.position.set(0, ph / 2 + F + 0.85, 0.7); grp.add(lamp);
+    const bulb = new THREE.Mesh(new THREE.BoxGeometry(Math.min(3, pw * 0.58), 0.08, 0.7), new THREE.MeshBasicMaterial({ color: '#fff6dc' }));
+    bulb.position.set(0, ph / 2 + F + 0.71, 0.7); grp.add(bulb);
     mount(grp, x, y, z, nx, nz, 0);
 
     const p = {
@@ -430,17 +477,17 @@ function createGame(photoData) {
     const doWall = (x, nx) => {
       const isQuote = wallSlot++ % 3 === 2 || photoI >= N;
       if (isQuote) placeQuote(x, 7.2, z, nx, 0);
-      else { placePhoto(nextPhoto(), photoI, x, 7.4, z, nx, 0, 7.4, 6.6); photoI++; }
+      else { placePhoto(nextPhoto(), photoI, x, 8.4, z, nx, 0, 6.2, 6.4); photoI++; }
     };
     doWall(-14, 1);
     if (i % 2 === 1) {
       // free-standing double-sided panel
-      addBox(0, 5.25, z - 5, 1, 10.5, 9.4, wallMat, { collide: true, cam: true });
-      addBox(0, 10.6, z - 5, 1.3, 0.3, 9.8, goldMat);
+      addBox(0, 6.25, z - 5, 1, 12.5, 9.4, wallMat, { collide: true, cam: true });
+      addBox(0, 12.6, z - 5, 1.3, 0.3, 9.8, goldMat);
       addBox(0, 0.3, z - 5, 1.3, 0.6, 9.8, goldMat);
       for (const nx of [-1, 1]) {
-        if (photoI < N) { placePhoto(nextPhoto(), photoI, nx * 0.5, 5.9, z - 5, nx, 0, 6.6, 6.2); photoI++; }
-        else placeQuote(nx * 0.5, 5.6, z - 5, nx, 0, 6.6);
+        if (photoI < N) { placePhoto(nextPhoto(), photoI, nx * 0.5, 6.6, z - 5, nx, 0, 5.6, 5.4); photoI++; }
+        else placeQuote(nx * 0.5, 6.4, z - 5, nx, 0, 6.6);
       }
     }
     doWall(14, -1);
@@ -741,6 +788,17 @@ function createGame(photoData) {
   // ---------------- input state
   const keys = new Set();
   const input = { x: 0, z: 0, run: false, jump: false, joy: null };
+  const dpad = { f: false, b: false, l: false, r: false };
+  for (const btn of document.querySelectorAll('.dp')) {
+    const dir = btn.dataset.dir;
+    const on = (e) => { e.preventDefault(); if (!$('help').classList.contains('hidden')) hideHelp(); dpad[dir] = true; btn.classList.add('on'); btn.setPointerCapture?.(e.pointerId); };
+    const off = () => { dpad[dir] = false; btn.classList.remove('on'); };
+    btn.addEventListener('pointerdown', on);
+    btn.addEventListener('pointerup', off);
+    btn.addEventListener('pointercancel', off);
+    btn.addEventListener('lostpointercapture', off);
+    btn.addEventListener('contextmenu', (e) => e.preventDefault());
+  }
   let paused = false;
 
   window.addEventListener('keydown', (e) => {
@@ -864,8 +922,8 @@ function createGame(photoData) {
   function hideHelp() { $('help').classList.add('hidden'); }
   $('help').addEventListener('click', hideHelp);
   $('help-text').innerHTML = isTouch
-    ? '<b>Left side</b> — drag to walk<br><b>Right side</b> — drag to look around<br><b>Jump</b> button to jump<br><b>1st / 3rd</b> to switch camera<br><b>Tap a photo</b> to see it in full resolution'
-    : '<b>W A S D</b> / arrows — walk &nbsp; <b>Shift</b> — run<br><b>Space</b> — jump<br><b>Drag mouse</b> — look around &nbsp; <b>Scroll</b> — zoom<br><b>V</b> — switch 1st / 3rd person<br><b>E</b> or <b>click a photo</b> — view it in full resolution';
+    ? '<b>Arrow pad</b> — forward, back, turn left &amp; right<br><b>Drag the screen</b> — look around<br><b>Jump</b> button to jump<br><b>1st / 3rd</b> to switch camera<br><b>Tap a photo</b> to see it in full resolution'
+    : '<b>↑ ↓</b> forward / back &nbsp; <b>← →</b> turn &nbsp; <b>Shift</b> — run<br><b>W A S D</b> — walk &amp; side-step<br><b>Space</b> — jump<br><b>Drag mouse</b> — look around &nbsp; <b>Scroll</b> — zoom<br><b>V</b> — switch 1st / 3rd person<br><b>E</b> or <b>click a photo</b> — view it in full resolution';
 
   // ---------------- toast & chat bubble
   let toastTimer = 0;
@@ -927,10 +985,20 @@ function createGame(photoData) {
   function step(dt, t) {
     // ---- movement input
     let ix = 0, iz = 0, run = false;
-    if (keys.has('KeyW') || keys.has('ArrowUp')) iz += 1;
-    if (keys.has('KeyS') || keys.has('ArrowDown')) iz -= 1;
-    if (keys.has('KeyA') || keys.has('ArrowLeft')) ix -= 1;
-    if (keys.has('KeyD') || keys.has('ArrowRight')) ix += 1;
+    if (keys.has('KeyW') || keys.has('ArrowUp') || dpad.f) iz += 1;
+    if (keys.has('KeyS') || keys.has('ArrowDown') || dpad.b) iz -= 1;
+    if (keys.has('KeyA')) ix -= 1;
+    if (keys.has('KeyD')) ix += 1;
+    // arrow keys / arrow buttons turn left & right
+    const turn = ((keys.has('ArrowLeft') || dpad.l) ? 1 : 0) - ((keys.has('ArrowRight') || dpad.r) ? 1 : 0);
+    if (turn && !lightbox.open) {
+      cam.yaw += turn * 2.4 * dt;
+      if (!cam.fp) {
+        let diff = cam.yaw + Math.PI - player.facing;
+        diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+        player.facing += diff * Math.min(1, dt * 12);
+      }
+    }
     run = keys.has('ShiftLeft') || keys.has('ShiftRight');
     let mag = Math.hypot(ix, iz);
     if (mag > 1) { ix /= mag; iz /= mag; mag = 1; }

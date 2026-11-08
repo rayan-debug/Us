@@ -1,9 +1,9 @@
-// Blocky (Roblox-style R6) girl: long straight black hair, curtain bangs,
+// Blocky (Roblox-style R6) girl: long straight dark hair with a middle part and caramel ends,
 // a daisy behind her ear, black zip hoodie over a grey tee, black pants,
 // white sneakers and a little gold bracelet.
 import * as THREE from '../vendor/three.module.min.js';
 
-const SKIN = '#f2cdb2';
+const SKIN = '#ecc4a4';
 const HOODIE = '#17171b';
 const PANTS = '#121215';
 
@@ -94,11 +94,17 @@ function torsoFrontTexture() {
     // crew neck
     g.fillStyle = '#a3a6ad';
     g.beginPath(); g.ellipse(256, 0, 70, 34, 0, 0, Math.PI); g.fill();
+    // thin gold necklace with a little heart (like in her photos)
+    g.strokeStyle = '#e2b13c'; g.lineWidth = 3;
+    g.beginPath(); g.moveTo(196, 0); g.quadraticCurveTo(256, 120, 316, 0); g.stroke();
+    g.fillStyle = '#e2b13c';
+    g.beginPath(); g.moveTo(256, 92); g.bezierCurveTo(240, 76, 236, 62, 248, 58); g.bezierCurveTo(254, 56, 256, 62, 256, 64);
+    g.bezierCurveTo(256, 62, 258, 56, 264, 58); g.bezierCurveTo(276, 62, 272, 76, 256, 92); g.fill();
     // collegiate letters on the tee
     g.font = '900 92px "Fredoka", "Arial Black", sans-serif';
     g.textAlign = 'center'; g.textBaseline = 'middle';
-    g.lineWidth = 10; g.strokeStyle = '#fff'; g.strokeText('US', 256, 170);
-    g.fillStyle = '#1f2840'; g.fillText('US', 256, 170);
+    g.lineWidth = 10; g.strokeStyle = '#fff'; g.strokeText('US', 256, 200);
+    g.fillStyle = '#1f2840'; g.fillText('US', 256, 200);
     // hoodie fabric texture
     for (let i = 0; i < 3000; i++) {
       const x = Math.random() * w, y = Math.random() * h;
@@ -176,7 +182,8 @@ export function createCharacter(name) {
   const hoodie = new THREE.MeshLambertMaterial({ color: HOODIE });
   const pants = new THREE.MeshLambertMaterial({ color: PANTS });
   const shoe = new THREE.MeshLambertMaterial({ color: '#f4f4f4' });
-  const hair = new THREE.MeshPhongMaterial({ color: '#0b0a0c', shininess: 70, specular: '#3c3f4a' });
+  const hair = new THREE.MeshPhongMaterial({ color: '#16100d', shininess: 70, specular: '#4a3a30' });
+  const hairEnds = new THREE.MeshPhongMaterial({ color: '#4a2f1e', shininess: 60, specular: '#6b4d36' });
   const gold = new THREE.MeshPhongMaterial({ color: '#e4b445', shininess: 90, specular: '#fff3c4', emissive: '#3a2600' });
 
   // ---- legs (pivot at hip)
@@ -224,24 +231,27 @@ export function createCharacter(name) {
   const neck = box(0.6, 0.12, 0.6, skin); neck.position.y = -0.66; head.add(neck);
 
   // ---- hair (head-relative where it moves with the head)
-  const top = box(1.42, 0.3, 1.44, hair); top.position.set(0, 0.74, -0.02); head.add(top);
-  const fringe = box(1.42, 0.36, 0.16, hair); fringe.position.set(0, 0.5, 0.7); head.add(fringe);
+  // middle part: two halves on top with a thin parting line between them
   for (const s of [1, -1]) {
-    // curtain bangs framing the face
-    const curtain = box(0.26, 0.95, 0.16, hair); curtain.position.set(0.58 * s, 0.05, 0.7); head.add(curtain);
+    const half = box(0.68, 0.3, 1.44, hair); half.position.set(0.37 * s, 0.74, -0.02); head.add(half);
+    // hair swept from the part down to the temples (no bangs)
+    const sweep = box(0.5, 0.26, 0.16, hair); sweep.position.set(0.44 * s, 0.56, 0.7); sweep.rotation.z = -0.32 * s; head.add(sweep);
+    // long face-framing strands
+    const curtain = box(0.22, 1.25, 0.16, hair); curtain.position.set(0.6 * s, -0.08, 0.7); head.add(curtain);
     // sides beside the ears
     const side = box(0.2, 1.5, 1.3, hair); side.position.set(0.74 * s, 0.05, -0.04); head.add(side);
   }
+  const partBack = box(0.08, 0.3, 0.9, hair); partBack.position.set(0, 0.74, -0.3); head.add(partBack);
   const backTop = box(1.42, 1.5, 0.24, hair); backTop.position.set(0, 0.05, -0.74); head.add(backTop);
   root.add(head);
 
   // long hair down the back and over the shoulders (body-relative)
-  const back = box(1.6, 2.2, 0.22, hair); back.position.set(0, 3.2, -0.62); root.add(back);
-  const backTip = box(1.3, 0.4, 0.2, hair); backTip.position.set(0, 1.95, -0.62); root.add(backTip);
+  const back = box(1.6, 2.4, 0.22, hair); back.position.set(0, 3.1, -0.62); root.add(back);
+  const backTip = box(1.4, 0.6, 0.2, hairEnds); backTip.position.set(0, 1.6, -0.62); root.add(backTip);
   for (const s of [1, -1]) {
     const shoulderLock = box(0.44, 0.24, 0.9, hair); shoulderLock.position.set(0.62 * s, 4.1, 0.06); root.add(shoulderLock);
-    const frontLock = box(0.42, 1.55, 0.14, hair); frontLock.position.set(0.62 * s, 3.3, 0.58); root.add(frontLock);
-    const lockTip = box(0.3, 0.3, 0.13, hair); lockTip.position.set(0.6 * s, 2.42, 0.58); root.add(lockTip);
+    const frontLock = box(0.42, 1.4, 0.14, hair); frontLock.position.set(0.62 * s, 3.38, 0.58); root.add(frontLock);
+    const lockTip = box(0.36, 0.6, 0.13, hairEnds); lockTip.position.set(0.61 * s, 2.38, 0.58); root.add(lockTip);
   }
 
   // daisy behind her right ear
