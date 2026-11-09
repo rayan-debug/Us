@@ -9,8 +9,9 @@ export const CONFIG = {
   // Our special day. The password is this date (3 3 2023).
   since: { year: 2023, month: 3, day: 3 },
 
-  // Name shown above the character's head (Roblox style).
-  characterName: 'My Love',
+  // Names shown above the characters' heads (Roblox style).
+  girlName: 'Meme',
+  boyName: 'Rore',
 
   // Big message on the wall of the last room.
   finalTitle: 'I love you',
@@ -55,4 +56,34 @@ export const LOVE_WORDS = [
   'my favourite person', 'us ❤', 'my sunshine', 'always you', 'my heart',
   'best day', 'my happy place', 'together', 'my everything', 'you & me',
   'forever', 'my love', 'pure magic', 'my world', 'soulmates', 'home',
+];
+
+// Things he says now and then while you walk around together.
+export const BOY_LINES = [
+  'Have I told you today that I love you? ❤️',
+  'You look beautiful, as always 🌹',
+  'This flower is for you, by the way 🌹',
+  'I would walk anywhere with you.',
+  'Every day with you is my favourite day.',
+  'Thank you for being mine ❤️',
+  'You are my home.',
+  'I still get butterflies when I see you 🦋',
+  'Stay close to me, okay? 🤍',
+  'You make my heart so happy.',
+  'I choose you. Today and every day.',
+  'Look how far we have come together ❤️',
+];
+
+// Things he says when you stop in front of a photo.
+export const PHOTO_LINES = [
+  'I remember this day so well ❤️',
+  'Look at us 🥹',
+  'You were so beautiful here.',
+  'One of my favourite memories with you.',
+  'I want a million more days like this.',
+  'This smile of yours… 😍',
+  'We look so happy here.',
+  'I fell for you all over again that day.',
+  'Can we go back here again?',
+  'My favourite picture of us. Okay, one of them 😄',
 ];

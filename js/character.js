@@ -7,7 +7,7 @@ const SKIN = '#ecc4a4';
 const HOODIE = '#17171b';
 const PANTS = '#121215';
 
-function canvasTexture(w, h, draw) {
+export function canvasTexture(w, h, draw) {
   const c = document.createElement('canvas');
   c.width = w; c.height = h;
   const g = c.getContext('2d');
@@ -137,7 +137,7 @@ function torsoBackTexture() {
   });
 }
 
-function nameTag(name) {
+export function nameTag(name) {
   const tex = canvasTexture(512, 128, (g) => {
     g.font = '700 64px "Fredoka", "Arial Rounded MT Bold", sans-serif';
     g.textAlign = 'center'; g.textBaseline = 'middle';
@@ -150,7 +150,7 @@ function nameTag(name) {
   return s;
 }
 
-function box(w, h, d, mat) {
+export function box(w, h, d, mat) {
   return new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
 }
 

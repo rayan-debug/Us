@@ -6,7 +6,7 @@ museum whose walls are covered with our photos and love quotes. The password is 
 ## Controls
 | | Computer | Phone |
 |---|---|---|
-| Walk | W A S D / arrows (Shift to run) | drag on the left side |
+| Walk | W A S D or arrow keys (Shift to run) | joystick on the left side |
 | Look | drag the mouse, scroll to zoom | drag on the right side |
 | Jump | Space | jump button |
 | 1st / 3rd person | V (or scroll all the way in) | 1st/3rd button |
@@ -36,3 +36,8 @@ On the free plan, GitHub Pages needs the repository to be public.
 ## Privacy
 The password only hides the game. The site is static, so anyone who has the direct link
 to an image file, or who browses the repository, can still see the photos.
+
+## Characters
+At the start you pick **Meme** (her) or **Rore** (him). The other character follows you everywhere,
+and Rore, holding his rose, is the one who talks in the speech bubbles. Use the ⇄ button at the top
+to switch characters during the game. Change the names and his lines in `js/content.js`.

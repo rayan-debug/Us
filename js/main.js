@@ -1,6 +1,7 @@
 import * as THREE from '../vendor/three.module.min.js';
-import { CONFIG, QUOTES, LOVE_WORDS } from './content.js';
+import { CONFIG, QUOTES, LOVE_WORDS, BOY_LINES, PHOTO_LINES } from './content.js';
 import { createCharacter } from './character.js';
+import { createBoy } from './boy.js';
 
 const $ = (id) => document.getElementById(id);
 const isTouch = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
@@ -751,9 +752,13 @@ function createGame(photoData) {
   // ============================================================
   //  Player & camera
   // ============================================================
-  const char = createCharacter(CONFIG.characterName);
-  scene.add(char.root); scene.add(char.shadow);
+  const girl = createCharacter(CONFIG.girlName);
+  const boy = createBoy(CONFIG.boyName);
+  for (const c of [girl, boy]) { scene.add(c.root); scene.add(c.shadow); }
+  let char = girl, buddyChar = boy;   // char = the one you control, buddyChar = the one following
   const player = { pos: new THREE.Vector3(0, 0, -28), vel: new THREE.Vector3(), grounded: true, facing: 0 };
+  const buddy = { pos: new THREE.Vector3(3, 0, -31), vel: new THREE.Vector3(), grounded: true, facing: 0, jumpIn: -1 };
+  let selecting = true;
   const R = 1.15, HEIGHT = 5.8;
   const cam = { yaw: Math.PI, pitch: 0.28, dist: isTouch ? 15 : 13, curDist: isTouch ? 15 : 13, fp: false };
 
@@ -785,20 +790,66 @@ function createGame(photoData) {
     }
   }
 
+  function integrate(body, dt) {
+    body.vel.y -= 196.2 * dt;
+    const sub = 3;
+    for (let s = 0; s < sub; s++) {
+      body.pos.x += body.vel.x * dt / sub;
+      body.pos.z += body.vel.z * dt / sub;
+      body.pos.y += body.vel.y * dt / sub;
+      resolve(body.pos);
+      const g = groundAt(body.pos.x, body.pos.z, body.pos.y);
+      if (body.pos.y <= g) { body.pos.y = g; if (body.vel.y < 0) body.vel.y = 0; body.grounded = true; }
+      else body.grounded = body.pos.y - g < 0.05 && body.vel.y <= 0;
+    }
+  }
+
+  // The companion walks after the player, a little behind and to the side.
+  function updateBuddy(dt, t) {
+    const fx = Math.sin(player.facing), fz = Math.cos(player.facing);
+    const tx = player.pos.x - fx * 3.6 + fz * 2.2;
+    const tz = player.pos.z - fz * 3.6 - fx * 2.2;
+    const toPlayer = Math.hypot(player.pos.x - buddy.pos.x, player.pos.z - buddy.pos.z);
+    if (toPlayer > 40 || !Number.isFinite(buddy.pos.x)) { buddy.pos.set(tx, player.pos.y, tz); buddy.vel.set(0, 0, 0); }
+    const dx = tx - buddy.pos.x, dz = tz - buddy.pos.z, d = Math.hypot(dx, dz);
+    let speed = 0;
+    if (toPlayer > 3.2 && d > 0.5) speed = Math.min(30, d * 3.2);
+    const k = Math.min(1, dt * 8);
+    buddy.vel.x += ((d > 0 ? dx / d : 0) * speed - buddy.vel.x) * k;
+    buddy.vel.z += ((d > 0 ? dz / d : 0) * speed - buddy.vel.z) * k;
+    // hop along when the player jumps
+    if (buddy.jumpIn > 0) { buddy.jumpIn -= dt; if (buddy.jumpIn <= 0 && buddy.grounded) { buddy.vel.y = 46; buddy.grounded = false; } }
+    integrate(buddy, dt);
+    // never stand inside each other
+    const sx = buddy.pos.x - player.pos.x, sz = buddy.pos.z - player.pos.z, sd = Math.hypot(sx, sz);
+    if (sd < 2.4 && sd > 1e-4) { buddy.pos.x = player.pos.x + sx / sd * 2.4; buddy.pos.z = player.pos.z + sz / sd * 2.4; resolve(buddy.pos); }
+    const hs = Math.hypot(buddy.vel.x, buddy.vel.z);
+    const target = hs > 1.5 ? Math.atan2(buddy.vel.x, buddy.vel.z) : Math.atan2(player.pos.x - buddy.pos.x, player.pos.z - buddy.pos.z);
+    let diff = target - buddy.facing; diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+    buddy.facing += diff * Math.min(1, dt * 8);
+    buddyChar.root.position.copy(buddy.pos);
+    buddyChar.root.rotation.y = buddy.facing;
+    buddyChar.update(dt, hs, buddy.grounded, t);
+    buddyChar.shadow.position.set(buddy.pos.x, groundAt(buddy.pos.x, buddy.pos.z, buddy.pos.y) + 0.05, buddy.pos.z);
+    buddyChar.root.visible = buddyChar.shadow.visible = true;
+  }
+
+  function choose(who) {
+    const wantBoy = who === 'boy';
+    if ((char === boy) !== wantBoy) {
+      [char, buddyChar] = [buddyChar, char];
+      const pp = player.pos.clone(), pf = player.facing;
+      player.pos.copy(buddy.pos); player.facing = buddy.facing;
+      buddy.pos.copy(pp); buddy.facing = pf;
+      player.vel.set(0, 0, 0); buddy.vel.set(0, 0, 0);
+      cam.yaw = player.facing + Math.PI;
+    }
+    $('btn-swap').textContent = char === boy ? `Play ${CONFIG.girlName}` : `Play ${CONFIG.boyName}`;
+  }
+
   // ---------------- input state
   const keys = new Set();
   const input = { x: 0, z: 0, run: false, jump: false, joy: null };
-  const dpad = { f: false, b: false, l: false, r: false };
-  for (const btn of document.querySelectorAll('.dp')) {
-    const dir = btn.dataset.dir;
-    const on = (e) => { e.preventDefault(); if (!$('help').classList.contains('hidden')) hideHelp(); dpad[dir] = true; btn.classList.add('on'); btn.setPointerCapture?.(e.pointerId); };
-    const off = () => { dpad[dir] = false; btn.classList.remove('on'); };
-    btn.addEventListener('pointerdown', on);
-    btn.addEventListener('pointerup', off);
-    btn.addEventListener('pointercancel', off);
-    btn.addEventListener('lostpointercapture', off);
-    btn.addEventListener('contextmenu', (e) => e.preventDefault());
-  }
   let paused = false;
 
   window.addEventListener('keydown', (e) => {
@@ -907,6 +958,7 @@ function createGame(photoData) {
   $('t-jump').addEventListener('pointerdown', (e) => { e.preventDefault(); input.jump = true; });
   $('t-view').addEventListener('pointerdown', (e) => { e.preventDefault(); toggleView(); });
   $('btn-view').addEventListener('click', toggleView);
+  $('btn-swap').addEventListener('click', () => { choose(char === boy ? 'girl' : 'boy'); showToast(`You are ${char === boy ? CONFIG.boyName : CONFIG.girlName} now`); });
   $('btn-help').addEventListener('click', () => $('help').classList.toggle('hidden'));
   $('btn-full').addEventListener('click', () => {
     if (document.fullscreenElement) document.exitFullscreen?.();
@@ -922,8 +974,8 @@ function createGame(photoData) {
   function hideHelp() { $('help').classList.add('hidden'); }
   $('help').addEventListener('click', hideHelp);
   $('help-text').innerHTML = isTouch
-    ? '<b>Arrow pad</b> — forward, back, turn left &amp; right<br><b>Drag the screen</b> — look around<br><b>Jump</b> button to jump<br><b>1st / 3rd</b> to switch camera<br><b>Tap a photo</b> to see it in full resolution'
-    : '<b>↑ ↓</b> forward / back &nbsp; <b>← →</b> turn &nbsp; <b>Shift</b> — run<br><b>W A S D</b> — walk &amp; side-step<br><b>Space</b> — jump<br><b>Drag mouse</b> — look around &nbsp; <b>Scroll</b> — zoom<br><b>V</b> — switch 1st / 3rd person<br><b>E</b> or <b>click a photo</b> — view it in full resolution';
+    ? '<b>Joystick (left side)</b> — drag to walk<br><b>Right side</b> — drag to look around<br><b>Jump</b> button to jump<br><b>1st / 3rd</b> to switch camera<br><b>Tap a photo</b> to see it in full resolution'
+    : '<b>W A S D</b> / arrow keys — walk &nbsp; <b>Shift</b> — run<br><b>Space</b> — jump<br><b>Drag mouse</b> — look around &nbsp; <b>Scroll</b> — zoom<br><b>V</b> — switch 1st / 3rd person<br><b>E</b> or <b>click a photo</b> — view it in full resolution';
 
   // ---------------- toast & chat bubble
   let toastTimer = 0;
@@ -978,6 +1030,7 @@ function createGame(photoData) {
   let nearest = null;
   let lastLOD = 0;
   let room = 'lobby';
+  let nextChat = 25, chatIdx = 0, photoChatIdx = 0, lastTalked = null;
   const clock = new THREE.Clock();
   const tmpV = new THREE.Vector3();
   const camDir = new THREE.Vector3();
@@ -985,20 +1038,10 @@ function createGame(photoData) {
   function step(dt, t) {
     // ---- movement input
     let ix = 0, iz = 0, run = false;
-    if (keys.has('KeyW') || keys.has('ArrowUp') || dpad.f) iz += 1;
-    if (keys.has('KeyS') || keys.has('ArrowDown') || dpad.b) iz -= 1;
-    if (keys.has('KeyA')) ix -= 1;
-    if (keys.has('KeyD')) ix += 1;
-    // arrow keys / arrow buttons turn left & right
-    const turn = ((keys.has('ArrowLeft') || dpad.l) ? 1 : 0) - ((keys.has('ArrowRight') || dpad.r) ? 1 : 0);
-    if (turn && !lightbox.open) {
-      cam.yaw += turn * 2.4 * dt;
-      if (!cam.fp) {
-        let diff = cam.yaw + Math.PI - player.facing;
-        diff = Math.atan2(Math.sin(diff), Math.cos(diff));
-        player.facing += diff * Math.min(1, dt * 12);
-      }
-    }
+    if (keys.has('KeyW') || keys.has('ArrowUp')) iz += 1;
+    if (keys.has('KeyS') || keys.has('ArrowDown')) iz -= 1;
+    if (keys.has('KeyA') || keys.has('ArrowLeft')) ix -= 1;
+    if (keys.has('KeyD') || keys.has('ArrowRight')) ix += 1;
     run = keys.has('ShiftLeft') || keys.has('ShiftRight');
     let mag = Math.hypot(ix, iz);
     if (mag > 1) { ix /= mag; iz /= mag; mag = 1; }
@@ -1012,21 +1055,9 @@ function createGame(photoData) {
     const k = Math.min(1, dt * 12);
     player.vel.x += (mx * speed - player.vel.x) * k;
     player.vel.z += (mz * speed - player.vel.z) * k;
-    if (input.jump && player.grounded) { player.vel.y = 50; player.grounded = false; }
+    if (input.jump && player.grounded) { player.vel.y = 50; player.grounded = false; buddy.jumpIn = 0.18; }
     input.jump = false;
-    player.vel.y -= 196.2 * dt;
-
-    const sub = 3;
-    for (let s = 0; s < sub; s++) {
-      player.pos.x += player.vel.x * dt / sub;
-      player.pos.z += player.vel.z * dt / sub;
-      player.pos.y += player.vel.y * dt / sub;
-      resolve(player.pos);
-      const g = groundAt(player.pos.x, player.pos.z, player.pos.y);
-      if (player.pos.y <= g) { player.pos.y = g; if (player.vel.y < 0) player.vel.y = 0; player.grounded = true; }
-      else player.grounded = player.pos.y - g < 0.05 && player.vel.y <= 0;
-      if (player.pos.y > g + 0.05 && player.vel.y <= 0 && player.pos.y - g < 0.6 && player.grounded) player.pos.y = g;
-    }
+    integrate(player, dt);
     // safety net
     if (player.pos.y < -20 || !Number.isFinite(player.pos.x)) { player.pos.set(0, 0, -28); player.vel.set(0, 0, 0); }
 
@@ -1042,6 +1073,7 @@ function createGame(photoData) {
     char.root.position.copy(player.pos);
     char.root.rotation.y = player.facing;
     char.update(dt, hs, player.grounded, t);
+    updateBuddy(dt, t);
     char.shadow.position.set(player.pos.x, groundAt(player.pos.x, player.pos.z, player.pos.y) + 0.05, player.pos.z);
 
     // ---- camera
@@ -1085,17 +1117,30 @@ function createGame(photoData) {
       } else prompt.classList.add('hidden');
     } else prompt.classList.add('hidden');
 
-    // ---- chat bubble above head
+    // ---- chat bubble: he is the one talking
     const bubble = $('bubble');
-    if (performance.now() < bubbleUntil && char.root.visible) {
-      const v = new THREE.Vector3(player.pos.x, player.pos.y + 7.6, player.pos.z).project(camera);
-      bubble.classList.add('show');
-      bubble.style.left = `${(v.x * 0.5 + 0.5) * window.innerWidth}px`;
-      bubble.style.top = `${(-v.y * 0.5 + 0.5) * window.innerHeight}px`;
-    } else if (performance.now() < bubbleUntil && cam.fp) {
+    const boyPos = char === boy ? player.pos : buddy.pos;
+    if (performance.now() < bubbleUntil && boy.root.visible) {
+      const v = new THREE.Vector3(boyPos.x, boyPos.y + 7.6, boyPos.z).project(camera);
+      if (v.z < 1) {
+        bubble.classList.add('show');
+        bubble.style.left = `${clamp((v.x * 0.5 + 0.5) * window.innerWidth, 140, window.innerWidth - 140)}px`;
+        bubble.style.top = `${clamp((-v.y * 0.5 + 0.5) * window.innerHeight, 90, window.innerHeight - 40)}px`;
+      } else bubble.classList.remove('show');
+    } else if (performance.now() < bubbleUntil && cam.fp && char === boy) {
       bubble.classList.add('show');
       bubble.style.left = '50%'; bubble.style.top = '22%';
     } else bubble.classList.remove('show');
+
+    // he says something sweet now and then, and about the photos you stop at
+    if (performance.now() > bubbleUntil + 14000 && t > nextChat) {
+      say(BOY_LINES[chatIdx++ % BOY_LINES.length]);
+      nextChat = t + 22 + Math.random() * 12;
+    }
+    if (nearest && nearest !== lastTalked && best < 8 && performance.now() > bubbleUntil + 1500 && Math.random() < 0.35 * dt * 4) {
+      lastTalked = nearest;
+      say(PHOTO_LINES[photoChatIdx++ % PHOTO_LINES.length]);
+    }
 
     const newRoom = player.pos.z < 0 ? 'lobby' : player.pos.z < L ? 'hall' : 'final';
     if (newRoom !== room) {
@@ -1109,10 +1154,26 @@ function createGame(photoData) {
     if (t - lastLOD > 0.4) { lastLOD = t; updateLOD(); }
   }
 
+  // character select: both stand side by side in the lobby facing the camera
+  function selectStep(dt, t) {
+    const sides = [[girl, -2.6], [boy, 2.6]];
+    for (const [c, x] of sides) {
+      c.root.visible = c.shadow.visible = true;
+      c.root.position.set(x, 0, -27);
+      c.root.rotation.y = 0;
+      c.update(dt, 0, true, t);
+      c.shadow.position.set(x, 0.05, -27);
+    }
+    const narrow = camera.aspect < 1;
+    camera.position.set(0, 4.2, narrow ? -10 : -16.5);
+    camera.lookAt(0, 3.6, -27);
+    for (const fn of animated) fn(t, dt);
+  }
+
   function frame() {
     const dt = Math.min(clock.getDelta(), 1 / 20);
     const t = clock.elapsedTime;
-    if (!paused) step(dt, t);
+    if (!paused) (selecting ? selectStep : step)(dt, t);
     renderer.render(scene, camera);
     requestAnimationFrame(frame);
   }
@@ -1135,10 +1196,32 @@ function createGame(photoData) {
     start() {
       $('chip-title').textContent = CONFIG.title;
       clock.start();
-      step(0.016, 0);
+      $('sel-boy-name').textContent = CONFIG.boyName;
+      $('sel-girl-name').textContent = CONFIG.girlName;
+      $('select').classList.remove('hidden');
+      $('topbar').classList.add('hidden');
+      const pick = (who) => {
+        $('select').classList.add('hidden');
+        $('topbar').classList.remove('hidden');
+        player.pos.set(who === 'boy' ? 2.6 : -2.6, 0, -27);
+        buddy.pos.set(who === 'boy' ? -2.6 : 2.6, 0, -27);
+        player.facing = 0; buddy.facing = 0; cam.yaw = Math.PI;
+        char = girl; buddyChar = boy;
+        choose(who);
+        player.pos.set(who === 'boy' ? 2.6 : -2.6, 0, -27); player.facing = 0;
+        buddy.pos.set(who === 'boy' ? -2.6 : 2.6, 0, -27); buddy.facing = 0;
+        cam.yaw = Math.PI;
+        selecting = false;
+        $('help').classList.remove('hidden');
+        step(0.016, clock.elapsedTime);
+        setTimeout(() => say(who === 'boy'
+          ? `Come on ${CONFIG.girlName}, I made you a museum ❤️`
+          : `Hi ${CONFIG.girlName}! Welcome to the ${CONFIG.title} ❤️`), 700);
+      };
+      $('sel-boy').addEventListener('click', () => pick('boy'));
+      $('sel-girl').addEventListener('click', () => pick('girl'));
       frame();
-      setTimeout(() => say(`Hi! Welcome to the ${CONFIG.title} ❤️`), 600);
     },
-    debug: { player, cam, photos, lightbox },
+    debug: { player, buddy, cam, photos, lightbox, choose, get selecting() { return selecting; } },
   };
 }
