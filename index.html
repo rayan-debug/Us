@@ -11,6 +11,20 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600;700&family=Fredoka:wght@400;500;600;700&family=Playfair+Display:ital,wght@1,500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
+  <script>
+    // If the phone kept an old copy of this page, jump to the newest version.
+    (function () {
+      var BUILD = '__BUILD__';
+      if (BUILD.indexOf('__') === 0) return; // local preview
+      fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (d) {
+          if (d && d.v && d.v !== BUILD && location.search.indexOf('v=' + d.v) < 0) {
+            location.replace(location.pathname + '?v=' + d.v + location.hash);
+          }
+        }).catch(function () {});
+    })();
+  </script>
 </head>
 <body>
   <!-- ===== Password ===== -->
