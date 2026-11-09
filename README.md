@@ -10,6 +10,7 @@ museum whose walls are covered with our photos and love quotes. The password is 
 | Look | drag the mouse, scroll to zoom | drag on the right side |
 | Jump | Space | jump button |
 | 1st / 3rd person | V (or scroll all the way in) | 1st/3rd button |
+| Hug / kiss | H / K or the 🤗 💋 buttons | 🤗 💋 buttons |
 | See a photo in full resolution | E or click the photo | tap the photo or the prompt |
 
 ## Adding the photos

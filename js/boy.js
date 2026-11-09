@@ -253,5 +253,5 @@ export function createBoy(name) {
     head.rotation.y = moving ? 0 : Math.sin(time * 0.5 + 1) * 0.15;
   }
 
-  return { root, shadow, update, tag };
+  return { root, shadow, update, tag, arms, head };
 }

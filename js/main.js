@@ -1,5 +1,5 @@
 import * as THREE from '../vendor/three.module.min.js';
-import { CONFIG, QUOTES, LOVE_WORDS, BOY_LINES, PHOTO_LINES } from './content.js';
+import { CONFIG, QUOTES, LOVE_WORDS, BOY_LINES, PHOTO_LINES, HUG_LINES, KISS_LINES } from './content.js';
 import { createCharacter } from './character.js';
 import { createBoy } from './boy.js';
 
@@ -807,13 +807,24 @@ function createGame(photoData) {
   // The companion walks after the player, a little behind and to the side.
   function updateBuddy(dt, t) {
     const fx = Math.sin(player.facing), fz = Math.cos(player.facing);
-    const tx = player.pos.x - fx * 3.6 + fz * 2.2;
-    const tz = player.pos.z - fz * 3.6 - fx * 2.2;
+    let tx = player.pos.x - fx * 3.6 + fz * 2.2;
+    let tz = player.pos.z - fz * 3.6 - fx * 2.2;
+    const cD = cuddle ? (cuddle.type === 'kiss' ? 1.75 : 2.0) : 0;
+    if (cuddle) {
+      // meet each other halfway: he comes to her side she is facing
+      let ux = buddy.pos.x - player.pos.x, uz = buddy.pos.z - player.pos.z;
+      const ul = Math.hypot(ux, uz) || 1; ux /= ul; uz /= ul;
+      tx = player.pos.x + ux * cD; tz = player.pos.z + uz * cD;
+    }
     const toPlayer = Math.hypot(player.pos.x - buddy.pos.x, player.pos.z - buddy.pos.z);
     if (toPlayer > 40 || !Number.isFinite(buddy.pos.x)) { buddy.pos.set(tx, player.pos.y, tz); buddy.vel.set(0, 0, 0); }
     const dx = tx - buddy.pos.x, dz = tz - buddy.pos.z, d = Math.hypot(dx, dz);
     let speed = 0;
-    if (toPlayer > 3.2 && d > 0.5) speed = Math.min(30, d * 3.2);
+    if (cuddle && !cuddle.acting) {
+      speed = d > 0.12 ? Math.min(24, 6 + d * 5) : 0;
+      if (d < 0.35 || cuddle.t > 1.6) { cuddle.acting = true; buddy.pos.set(tx, buddy.pos.y, tz); resolve(buddy.pos); }
+    } else if (cuddle) speed = 0;
+    else if (toPlayer > 3.2 && d > 0.5) speed = Math.min(30, d * 3.2);
     const k = Math.min(1, dt * 8);
     buddy.vel.x += ((d > 0 ? dx / d : 0) * speed - buddy.vel.x) * k;
     buddy.vel.z += ((d > 0 ? dz / d : 0) * speed - buddy.vel.z) * k;
@@ -822,16 +833,96 @@ function createGame(photoData) {
     integrate(buddy, dt);
     // never stand inside each other
     const sx = buddy.pos.x - player.pos.x, sz = buddy.pos.z - player.pos.z, sd = Math.hypot(sx, sz);
-    if (sd < 2.4 && sd > 1e-4) { buddy.pos.x = player.pos.x + sx / sd * 2.4; buddy.pos.z = player.pos.z + sz / sd * 2.4; resolve(buddy.pos); }
+    const minGap = cuddle ? cD * 0.97 : 2.4;
+    if (sd < minGap && sd > 1e-4) { buddy.pos.x = player.pos.x + sx / sd * minGap; buddy.pos.z = player.pos.z + sz / sd * minGap; resolve(buddy.pos); }
     const hs = Math.hypot(buddy.vel.x, buddy.vel.z);
-    const target = hs > 1.5 ? Math.atan2(buddy.vel.x, buddy.vel.z) : Math.atan2(player.pos.x - buddy.pos.x, player.pos.z - buddy.pos.z);
+    const target = (hs > 1.5 && !(cuddle && cuddle.acting)) ? Math.atan2(buddy.vel.x, buddy.vel.z) : Math.atan2(player.pos.x - buddy.pos.x, player.pos.z - buddy.pos.z);
     let diff = target - buddy.facing; diff = Math.atan2(Math.sin(diff), Math.cos(diff));
     buddy.facing += diff * Math.min(1, dt * 8);
     buddyChar.root.position.copy(buddy.pos);
     buddyChar.root.rotation.y = buddy.facing;
     buddyChar.update(dt, hs, buddy.grounded, t);
+    applyPose(buddyChar, t);
     buddyChar.shadow.position.set(buddy.pos.x, groundAt(buddy.pos.x, buddy.pos.z, buddy.pos.y) + 0.05, buddy.pos.z);
     buddyChar.root.visible = buddyChar.shadow.visible = true;
+  }
+
+  // ---------------- hug & kiss
+  let cuddle = null; // { type, t, acting, actT, burst }
+  function startCuddle(type) {
+    if (cuddle || selecting || lightbox.open || !player.grounded) return;
+    cuddle = { type, t: 0, acting: false, actT: 0, burst: false };
+    keys.clear(); input.joy = null; $('joy-base').classList.remove('active');
+  }
+  function cuddleBlend() {
+    if (!cuddle || !cuddle.acting) return 0;
+    const a = cuddle.actT;
+    return a < 0.35 ? a / 0.35 : a < 2.8 ? 1 : Math.max(0, 1 - (a - 2.8) / 0.4);
+  }
+  function applyPose(c, t) {
+    if (c.root.rotation.order !== 'YXZ') c.root.rotation.order = 'YXZ';
+    const b = cuddleBlend();
+    c.root.rotation.x = 0;
+    if (b <= 0) return;
+    const kiss = cuddle.type === 'kiss';
+    const lerp = (a, v) => a + (v - a) * b;
+    c.arms.forEach((arm, i) => {
+      const side = i === 0 ? 1 : -1;
+      arm.rotation.x = lerp(arm.rotation.x, kiss ? -0.95 : -1.45);
+      arm.rotation.z = lerp(arm.rotation.z, -side * (kiss ? 0.3 : 0.55));
+    });
+    c.head.rotation.y = lerp(c.head.rotation.y, 0);
+    c.head.rotation.x = lerp(c.head.rotation.x, kiss ? 0.16 : 0.05);
+    c.root.rotation.x = (kiss ? 0.14 : 0.06) * b;
+  }
+
+  // heart burst
+  const burstMat = new THREE.SpriteMaterial({ map: heartSprite, transparent: true, depthWrite: false });
+  const bursts = [];
+  function heartBurst(x, y, z, n, big) {
+    const cols = ['#ff4d6d', '#ff8fa3', '#e8325a', '#ffc2d1', '#ff6b8b'];
+    for (let i = 0; i < n; i++) {
+      const sp = new THREE.Sprite(burstMat.clone());
+      sp.material.color.set(cols[i % cols.length]);
+      const s0 = (big ? 0.9 : 0.5) + Math.random() * 0.6;
+      sp.scale.setScalar(s0);
+      sp.position.set(x, y, z);
+      const a = Math.random() * Math.PI * 2, up = 6 + Math.random() * 8, out = 2 + Math.random() * 5;
+      scene.add(sp);
+      bursts.push({ sp, vx: Math.cos(a) * out, vy: up, vz: Math.sin(a) * out, life: 0, max: 1.6 + Math.random() * 0.9, s0 });
+    }
+  }
+  animated.push((t, dt) => {
+    for (let i = bursts.length - 1; i >= 0; i--) {
+      const p = bursts[i];
+      p.life += dt;
+      p.vy -= 4 * dt; p.vx *= 0.97; p.vz *= 0.97;
+      p.sp.position.x += p.vx * dt; p.sp.position.y += p.vy * dt; p.sp.position.z += p.vz * dt;
+      const f = p.life / p.max;
+      p.sp.material.opacity = 1 - f * f;
+      p.sp.scale.setScalar(p.s0 * (1 + f * 0.5));
+      if (p.life >= p.max) { scene.remove(p.sp); p.sp.material.dispose(); bursts.splice(i, 1); }
+    }
+  });
+
+  function updateCuddle(dt) {
+    if (!cuddle) return;
+    cuddle.t += dt;
+    if (!cuddle.acting) return;
+    cuddle.actT += dt;
+    if (!cuddle.burst && cuddle.actT > 0.3) {
+      cuddle.burst = true;
+      const mx = (player.pos.x + buddy.pos.x) / 2, mz = (player.pos.z + buddy.pos.z) / 2;
+      heartBurst(mx, player.pos.y + 5.2, mz, cuddle.type === 'kiss' ? 26 : 34, cuddle.type === 'kiss');
+      const lines = cuddle.type === 'kiss' ? KISS_LINES : HUG_LINES;
+      say(lines[Math.floor(Math.random() * lines.length)], 3.2);
+    }
+    if (cuddle.type === 'kiss' && cuddle.actT > 1.2 && !cuddle.burst2) {
+      cuddle.burst2 = true;
+      const mx = (player.pos.x + buddy.pos.x) / 2, mz = (player.pos.z + buddy.pos.z) / 2;
+      heartBurst(mx, player.pos.y + 5.4, mz, 14, true);
+    }
+    if (cuddle.actT > 3.25) cuddle = null;
   }
 
   function choose(who) {
@@ -864,6 +955,8 @@ function createGame(photoData) {
     keys.add(e.code);
     if (e.code === 'Space') { input.jump = true; e.preventDefault(); }
     if (e.code === 'KeyV' || e.code === 'KeyC') toggleView();
+    if (e.code === 'KeyH') startCuddle('hug');
+    if (e.code === 'KeyK') startCuddle('kiss');
     if ((e.code === 'KeyE' || e.code === 'Enter') && nearest) lightbox.show(nearest.index);
     if (e.code.startsWith('Arrow')) e.preventDefault();
   });
@@ -956,6 +1049,8 @@ function createGame(photoData) {
   joyZone.addEventListener('pointerup', joyEnd);
   joyZone.addEventListener('pointercancel', joyEnd);
   $('t-jump').addEventListener('pointerdown', (e) => { e.preventDefault(); input.jump = true; });
+  $('btn-hug').addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); startCuddle('hug'); });
+  $('btn-kiss').addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); startCuddle('kiss'); });
   $('t-view').addEventListener('pointerdown', (e) => { e.preventDefault(); toggleView(); });
   $('btn-view').addEventListener('click', toggleView);
   $('btn-swap').addEventListener('click', () => { choose(char === boy ? 'girl' : 'boy'); showToast(`You are ${char === boy ? CONFIG.boyName : CONFIG.girlName} now`); });
@@ -974,8 +1069,8 @@ function createGame(photoData) {
   function hideHelp() { $('help').classList.add('hidden'); }
   $('help').addEventListener('click', hideHelp);
   $('help-text').innerHTML = isTouch
-    ? '<b>Joystick (left side)</b> — drag to walk<br><b>Right side</b> — drag to look around<br><b>Jump</b> button to jump<br><b>1st / 3rd</b> to switch camera<br><b>Tap a photo</b> to see it in full resolution'
-    : '<b>W A S D</b> / arrow keys — walk &nbsp; <b>Shift</b> — run<br><b>Space</b> — jump<br><b>Drag mouse</b> — look around &nbsp; <b>Scroll</b> — zoom<br><b>V</b> — switch 1st / 3rd person<br><b>E</b> or <b>click a photo</b> — view it in full resolution';
+    ? '<b>Joystick (left side)</b> — drag to walk<br><b>Right side</b> — drag to look around<br><b>Jump</b> button to jump<br><b>1st / 3rd</b> to switch camera<br><b>🤗 / 💋</b> — hug or kiss<br><b>Tap a photo</b> to see it in full resolution'
+    : '<b>W A S D</b> / arrow keys — walk &nbsp; <b>Shift</b> — run<br><b>Space</b> — jump<br><b>Drag mouse</b> — look around &nbsp; <b>Scroll</b> — zoom<br><b>V</b> — switch 1st / 3rd person<br><b>H</b> — hug &nbsp; <b>K</b> — kiss<br><b>E</b> or <b>click a photo</b> — view it in full resolution';
 
   // ---------------- toast & chat bubble
   let toastTimer = 0;
@@ -1046,7 +1141,7 @@ function createGame(photoData) {
     let mag = Math.hypot(ix, iz);
     if (mag > 1) { ix /= mag; iz /= mag; mag = 1; }
     if (input.joy) { ix = input.joy.x; iz = -input.joy.y; mag = Math.min(1, Math.hypot(ix, iz)); run = mag > 0.92; }
-    if (lightbox.open) { ix = iz = 0; mag = 0; input.jump = false; }
+    if (lightbox.open || cuddle) { ix = iz = 0; mag = 0; input.jump = false; }
 
     const sy = Math.sin(cam.yaw), cy = Math.cos(cam.yaw);
     const mx = ix * cy + iz * -sy;
@@ -1063,7 +1158,12 @@ function createGame(photoData) {
 
     // ---- character
     const hs = Math.hypot(player.vel.x, player.vel.z);
-    if (cam.fp) player.facing = cam.yaw + Math.PI;
+    if (cuddle) {
+      const target = Math.atan2(buddy.pos.x - player.pos.x, buddy.pos.z - player.pos.z);
+      let diff = target - player.facing; diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+      player.facing += diff * Math.min(1, dt * 10);
+      if (cam.fp) cam.yaw = player.facing + Math.PI;
+    } else if (cam.fp) player.facing = cam.yaw + Math.PI;
     else if (hs > 1) {
       const target = Math.atan2(player.vel.x, player.vel.z);
       let diff = target - player.facing;
@@ -1073,6 +1173,8 @@ function createGame(photoData) {
     char.root.position.copy(player.pos);
     char.root.rotation.y = player.facing;
     char.update(dt, hs, player.grounded, t);
+    applyPose(char, t);
+    updateCuddle(dt);
     updateBuddy(dt, t);
     char.shadow.position.set(player.pos.x, groundAt(player.pos.x, player.pos.z, player.pos.y) + 0.05, player.pos.z);
 

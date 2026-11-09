@@ -295,5 +295,5 @@ export function createCharacter(name) {
     head.rotation.y = moving ? 0 : Math.sin(time * 0.6) * 0.12;
   }
 
-  return { root, shadow, update, tag };
+  return { root, shadow, update, tag, arms, head };
 }

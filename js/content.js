@@ -87,3 +87,12 @@ export const PHOTO_LINES = [
   'Can we go back here again?',
   'My favourite picture of us. Okay, one of them 😄',
 ];
+
+// What he says when they hug (H / 🤗) and kiss (K / 💋).
+export const HUG_LINES = [
+  'Come here ❤️', 'I never want to let you go 🤍', 'Best place in the world: right here.',
+  'My favourite hug 🥰', 'I love you so much ❤️',
+];
+export const KISS_LINES = [
+  'Mwah 😘', 'I love you ❤️', 'One more? 😚', 'You are my everything 💋', 'Forever yours ❤️',
+];
