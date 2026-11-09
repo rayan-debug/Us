@@ -29,6 +29,12 @@ jobs:
         run: |
           pip install --quiet pillow pillow-heif
           python tools/build_photos.py
+      - name: Stamp file versions so phones never keep an old copy
+        run: |
+          V=${GITHUB_SHA::8}
+          sed -i -E "s#href=\"style.css\"#href=\"style.css?v=$V\"#; s#src=\"js/main.js\"#src=\"js/main.js?v=$V\"#" index.html
+          sed -i -E "s#(from '\.{1,2}/[A-Za-z./_-]+\.js)'#\1?v=$V'#g" js/*.js
+          grep -n "?v=" index.html js/*.js
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
