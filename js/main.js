@@ -1302,9 +1302,11 @@ function createGame(photoData) {
       $('sel-girl-name').textContent = CONFIG.girlName;
       $('select').classList.remove('hidden');
       $('topbar').classList.add('hidden');
+      $('love-buttons').classList.add('hidden');
       const pick = (who) => {
         $('select').classList.add('hidden');
         $('topbar').classList.remove('hidden');
+        $('love-buttons').classList.remove('hidden');
         player.pos.set(who === 'boy' ? 2.6 : -2.6, 0, -27);
         buddy.pos.set(who === 'boy' ? -2.6 : 2.6, 0, -27);
         player.facing = 0; buddy.facing = 0; cam.yaw = Math.PI;

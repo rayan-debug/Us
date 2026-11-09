@@ -1,12 +1,12 @@
 // Blocky (Roblox-style R6) boy: short dark hair with a fade, full beard,
-// round black glasses, light-blue button shirt, dark jeans, white sneakers,
-// and a red rose in his hand for her.
+// round black glasses, a full black suit with a white shirt and black tie,
+// black dress shoes, and a red rose in his hand for her.
 import * as THREE from '../vendor/three.module.min.js';
 import { canvasTexture, nameTag, box } from './character.js';
 
 const SKIN = '#e3b48f';
-const SHIRT = '#a9c8ea';
-const JEANS = '#2c3e5c';
+const SUIT = '#141417';
+const SUIT_LIGHT = '#24242a';
 const HAIR = '#1a1310';
 
 function faceTexture() {
@@ -66,42 +66,49 @@ function faceTexture() {
 
 function shirtFrontTexture() {
   return canvasTexture(512, 512, (g, w, h) => {
-    g.fillStyle = SHIRT; g.fillRect(0, 0, w, h);
-    // oxford weave
-    for (let i = 0; i < 4000; i++) {
-      g.fillStyle = Math.random() < 0.5 ? 'rgba(255,255,255,0.12)' : 'rgba(30,60,110,0.07)';
+    g.fillStyle = SUIT; g.fillRect(0, 0, w, h);
+    for (let i = 0; i < 3000; i++) {
+      g.fillStyle = Math.random() < 0.5 ? 'rgba(255,255,255,0.025)' : 'rgba(0,0,0,0.2)';
       g.fillRect(Math.random() * w, Math.random() * h, 2, 2);
     }
-    // open collar with a bit of skin and chest hair-free V
-    g.fillStyle = SKIN;
-    g.beginPath(); g.moveTo(196, 0); g.lineTo(256, 92); g.lineTo(316, 0); g.fill();
-    g.fillStyle = '#c4dbf3';
+    // white shirt in the V of the jacket
+    g.fillStyle = '#f4f5f7';
+    g.beginPath(); g.moveTo(150, 0); g.lineTo(362, 0); g.lineTo(256, 300); g.closePath(); g.fill();
+    // shirt collar
+    g.fillStyle = '#ffffff';
+    for (const s of [-1, 1]) { g.beginPath(); g.moveTo(256, 50); g.lineTo(256 + s * 96, 0); g.lineTo(256 + s * 40, 0); g.closePath(); g.fill(); }
+    g.strokeStyle = 'rgba(0,0,0,0.15)'; g.lineWidth = 2;
+    g.beginPath(); g.moveTo(160, 0); g.lineTo(256, 50); g.lineTo(352, 0); g.stroke();
+    // black tie
+    g.fillStyle = '#0a0a0c';
+    g.beginPath(); g.moveTo(240, 46); g.lineTo(272, 46); g.lineTo(264, 74); g.lineTo(248, 74); g.closePath(); g.fill();
+    g.beginPath(); g.moveTo(248, 74); g.lineTo(264, 74); g.lineTo(276, 260); g.lineTo(256, 290); g.lineTo(236, 260); g.closePath(); g.fill();
+    // satin lapels
+    g.fillStyle = SUIT_LIGHT;
     for (const s of [-1, 1]) {
-      g.beginPath(); g.moveTo(256, 96); g.lineTo(256 + s * 66, 0); g.lineTo(256 + s * 150, 0); g.lineTo(256 + s * 120, 60); g.closePath(); g.fill();
-      g.strokeStyle = 'rgba(40,70,120,0.35)'; g.lineWidth = 3; g.stroke();
+      g.beginPath(); g.moveTo(256 + s * 106, 0); g.lineTo(256 + s * 150, 0); g.lineTo(256 + s * 170, 110);
+      g.lineTo(256 + s * 120, 140); g.lineTo(256 + s * 24, 330); g.lineTo(256 + s * 10, 300); g.closePath(); g.fill();
     }
-    // placket & buttons
-    g.strokeStyle = 'rgba(40,70,120,0.3)'; g.lineWidth = 3;
-    g.beginPath(); g.moveTo(244, 96); g.lineTo(244, h); g.moveTo(268, 96); g.lineTo(268, h); g.stroke();
-    g.fillStyle = '#eef4fb';
-    for (let y = 150; y < h - 20; y += 80) { g.beginPath(); g.arc(256, y, 8, 0, Math.PI * 2); g.fill(); }
-    // chest pocket
-    g.strokeStyle = 'rgba(40,70,120,0.35)';
-    g.strokeRect(330, 160, 90, 96);
-    // tucked into the belt
-    g.fillStyle = '#1c1c1f'; g.fillRect(0, 466, w, 46);
-    g.fillStyle = '#b9bcc2'; g.fillRect(232, 470, 48, 38);
-    g.fillStyle = '#1c1c1f'; g.fillRect(242, 478, 28, 22);
+    g.strokeStyle = 'rgba(255,255,255,0.12)'; g.lineWidth = 3;
+    for (const s of [-1, 1]) { g.beginPath(); g.moveTo(256 + s * 150, 0); g.lineTo(256 + s * 170, 110); g.lineTo(256 + s * 120, 140); g.lineTo(256 + s * 24, 330); g.stroke(); }
+    // jacket buttons
+    g.fillStyle = '#2e2e34';
+    for (const y of [360, 430]) { g.beginPath(); g.arc(256, y, 9, 0, Math.PI * 2); g.fill(); }
+    // pocket square and pockets
+    g.fillStyle = '#ffffff';
+    g.beginPath(); g.moveTo(340, 178); g.lineTo(356, 160); g.lineTo(372, 176); g.lineTo(388, 162); g.lineTo(398, 182); g.lineTo(340, 182); g.fill();
+    g.strokeStyle = 'rgba(255,255,255,0.1)'; g.lineWidth = 3;
+    g.beginPath(); g.moveTo(330, 184); g.lineTo(410, 184); g.stroke();
+    for (const x of [60, 370]) { g.beginPath(); g.moveTo(x, 400); g.lineTo(x + 90, 400); g.stroke(); }
   });
 }
 
 function shirtBackTexture() {
   return canvasTexture(256, 256, (g, w, h) => {
-    g.fillStyle = SHIRT; g.fillRect(0, 0, w, h);
-    g.fillStyle = '#c4dbf3'; g.fillRect(40, 0, 176, 24);
-    g.strokeStyle = 'rgba(40,70,120,0.3)'; g.lineWidth = 3;
-    g.beginPath(); g.moveTo(0, 60); g.quadraticCurveTo(128, 80, 256, 60); g.stroke();
-    g.fillStyle = '#1c1c1f'; g.fillRect(0, 233, w, 23);
+    g.fillStyle = SUIT; g.fillRect(0, 0, w, h);
+    g.fillStyle = '#ffffff'; g.fillRect(96, 0, 64, 8);
+    g.strokeStyle = 'rgba(255,255,255,0.06)'; g.lineWidth = 3;
+    g.beginPath(); g.moveTo(128, 120); g.lineTo(128, 256); g.stroke();
   });
 }
 
@@ -136,9 +143,9 @@ function rose() {
 export function createBoy(name) {
   const root = new THREE.Group();
   const skin = new THREE.MeshLambertMaterial({ color: SKIN });
-  const shirt = new THREE.MeshLambertMaterial({ color: SHIRT });
-  const jeans = new THREE.MeshLambertMaterial({ color: JEANS });
-  const shoe = new THREE.MeshLambertMaterial({ color: '#f4f4f4' });
+  const shirt = new THREE.MeshLambertMaterial({ color: SUIT });
+  const jeans = new THREE.MeshLambertMaterial({ color: '#111114' });
+  const shoe = new THREE.MeshPhongMaterial({ color: '#08080a', shininess: 120, specular: '#888899' });
   const hair = new THREE.MeshLambertMaterial({ color: HAIR });
   const fade = new THREE.MeshLambertMaterial({ color: '#4a3a32' });
   const frameMat = new THREE.MeshPhongMaterial({ color: '#111114', shininess: 80 });
@@ -151,7 +158,7 @@ export function createBoy(name) {
     hip.position.set(0.5 * s, 2, 0);
     const leg = box(0.98, 1.7, 0.98, jeans); leg.position.y = -0.85; hip.add(leg);
     const sneaker = box(1.0, 0.3, 1.1, shoe); sneaker.position.set(0, -1.85, 0.05); hip.add(sneaker);
-    const sole = box(1.02, 0.08, 1.12, new THREE.MeshLambertMaterial({ color: '#d9d9d9' }));
+    const sole = box(1.02, 0.08, 1.12, new THREE.MeshLambertMaterial({ color: '#1e1e22' }));
     sole.position.set(0, -1.96, 0.05); hip.add(sole);
     root.add(hip); legs.push(hip);
   }
@@ -170,7 +177,7 @@ export function createBoy(name) {
     const sh = new THREE.Group();
     sh.position.set(1.55 * s, 3.85, 0);
     const sleeve = box(1, 1.45, 1, shirt); sleeve.position.y = -0.68; sh.add(sleeve);
-    const cuff = box(1.04, 0.2, 1.04, new THREE.MeshLambertMaterial({ color: '#c4dbf3' })); cuff.position.y = -1.48; sh.add(cuff);
+    const cuff = box(1.04, 0.16, 1.04, new THREE.MeshLambertMaterial({ color: '#ffffff' })); cuff.position.y = -1.48; sh.add(cuff);
     const hand = box(0.86, 0.42, 0.86, skin); hand.position.y = -1.78; sh.add(hand);
     if (s === 1) {
       const watch = box(0.9, 0.16, 0.9, new THREE.MeshPhongMaterial({ color: '#2a2a2e', shininess: 80 }));
